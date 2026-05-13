@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<!-- saved from url=(0059)file:///Users/jacoballen/Downloads/contraction-tracker.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Contractions">
+<title>Contraction Tracker</title>
+<link rel="stylesheet" href="./index_files/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --text: #1a1a18;
+    --text-secondary: #888780;
+    --border: rgba(0,0,0,0.12);
+    --border-secondary: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --green-bg: #EAF3DE; --green-text: #3B6D11;
+    --amber-bg: #FAEEDA; --amber-text: #854F0B;
+    --coral-bg: #FAECE7; --coral-text: #993C1D;
+    --coral-border: #D85A30;
+    --red-text: #E24B4A;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --bg-secondary: #2a2a28;
+      --text: #f0ede6;
+      --text-secondary: #888780;
+      --border: rgba(255,255,255,0.10);
+      --border-secondary: rgba(255,255,255,0.20);
+      --green-bg: #173404; --green-text: #C0DD97;
+      --amber-bg: #412402; --amber-text: #FAC775;
+      --coral-bg: #4A1B0C; --coral-text: #F5C4B3;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding: 1.5rem 1rem 3rem;
+    max-width: 520px;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }
+  .header-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
+  .clock { font-size: 30px; font-weight: 500; letter-spacing: -0.5px; color: var(--text); line-height: 1; }
+  .status-badge {
+    font-size: 12px; font-weight: 500;
+    padding: 4px 12px; border-radius: var(--radius-md);
+    display: none;
+  }
+  .status-badge.visible { display: block; }
+  .status-badge.early { background: var(--green-bg); color: var(--green-text); }
+  .status-badge.active { background: var(--amber-bg); color: var(--amber-text); }
+  .status-badge.alert { background: var(--coral-bg); color: var(--coral-text); }
+
+  /* Summary cards */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px 14px; }
+  .card-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .card-value { font-size: 20px; font-weight: 500; color: var(--text); }
+
+  /* Timer button */
+  .btn-wrap { text-align: center; margin-bottom: 1.5rem; }
+  .btn-timer {
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    border: 1px solid var(--border-secondary);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 5px;
+    font-family: inherit;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+    touch-action: manipulation;
+  }
+  .btn-timer:active { transform: scale(0.96); }
+  .btn-timer.idle .ti { font-size: 30px; }
+  .btn-timer.idle .btn-label { font-size: 13px; font-weight: 500; }
+  .btn-timer.running {
+    border: 2.5px solid var(--coral-border);
+    background: var(--coral-bg);
+    color: var(--coral-text);
+  }
+  .btn-timer.running .elapsed { font-size: 28px; font-weight: 500; line-height: 1; }
+  .btn-timer.running .btn-label { font-size: 13px; font-weight: 500; }
+
+  /* Hint text */
+  .hint { text-align: center; font-size: 14px; color: var(--text-secondary); margin-top: 0.5rem; }
+
+  /* Table */
+  .table-wrap {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  thead tr { border-bottom: 0.5px solid var(--border); }
+  th {
+    padding: 10px 12px; text-align: left;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-secondary);
+  }
+  th.col-num  { width: 34px; }
+  th.col-del  { width: 42px; text-align: center; }
+  td { padding: 12px 12px; font-size: 14px; color: var(--text); }
+  tr.latest { background: var(--bg-secondary); }
+  tr + tr { border-top: 0.5px solid var(--border); }
+
+  .dur-badge {
+    font-size: 13px; font-weight: 500;
+    padding: 3px 10px; border-radius: var(--radius-md);
+    display: inline-block;
+  }
+  .dur-green { background: var(--green-bg); color: var(--green-text); }
+  .dur-amber { background: var(--amber-bg); color: var(--amber-text); }
+  .dur-coral { background: var(--coral-bg); color: var(--coral-text); }
+
+  .muted { color: var(--text-secondary); }
+  .td-num { font-size: 13px; color: var(--text-secondary); }
+
+  .btn-del {
+    background: none; border: none;
+    cursor: pointer; color: var(--text-secondary);
+    font-size: 16px; padding: 4px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; font-family: inherit;
+    transition: color 0.1s;
+    -webkit-appearance: none;
+  }
+  .btn-del:hover, .btn-del:active { color: var(--red-text); }
+</style>
+</head>
+<body>
+
+<h1 class="sr-only">Labour contraction tracker</h1>
+
+<div class="header">
+  <div>
+    <div class="header-label">contraction tracker</div>
+    <div class="clock" id="clock">11:16:33</div>
+  </div>
+  <div class="status-badge" id="status-badge"></div>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-label">contractions</div>
+    <div class="card-value" id="card-count">—</div>
+  </div>
+  <div class="card">
+    <div class="card-label">avg duration</div>
+    <div class="card-value" id="card-avg-dur">—</div>
+  </div>
+  <div class="card">
+    <div class="card-label">last interval</div>
+    <div class="card-value" id="card-last-int">—</div>
+  </div>
+</div>
+
+<div class="btn-wrap">
+  <button class="btn-timer idle" id="main-btn" onclick="toggleTimer()">
+    <i class="ti ti-player-play" aria-hidden="true"></i>
+    <span class="btn-label">start</span>
+  </button>
+</div>
+
+<p class="hint" id="hint">press start when a contraction begins, stop when it ends</p>
+
+<div class="table-wrap" id="table-wrap" style="display:none;">
+  <table>
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        <th>time</th>
+        <th>duration</th>
+        <th>interval</th>
+        <th class="col-del"></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+  let contractions = [];
+  let timing = false;
+  let elapsed = 0;
+  let startTime = null;
+  let timerInterval = null;
+
+  function fmt(d) {
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  function fmtSec(s) {
+    if (s == null) return '—';
+    const m = Math.floor(s / 60), sec = s % 60;
+    return m > 0 ? m + 'm ' + sec + 's' : sec + 's';
+  }
+  function durClass(d) {
+    if (d >= 60) return 'dur-coral';
+    if (d >= 45) return 'dur-amber';
+    return 'dur-green';
+  }
+
+  // Clock
+  function updateClock() {
+    document.getElementById('clock').textContent = fmt(new Date());
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function toggleTimer() {
+    if (!timing) {
+      startTime = new Date();
+      elapsed = 0;
+      timing = true;
+      const btn = document.getElementById('main-btn');
+      btn.className = 'btn-timer running';
+      btn.innerHTML = '<span class="elapsed">0s</span><span class="btn-label">stop</span>';
+      timerInterval = setInterval(() => {
+        elapsed++;
+        document.querySelector('#main-btn .elapsed').textContent = fmtSec(elapsed);
+      }, 1000);
+    } else {
+      clearInterval(timerInterval);
+      timing = false;
+      const dur = elapsed;
+      const prev = contractions.length > 0 ? contractions[contractions.length - 1] : null;
+      const interval = prev ? Math.round((startTime - prev.startTime) / 1000) : null;
+      contractions.push({ id: Date.now(), time: fmt(startTime), startTime, duration: dur, interval });
+      elapsed = 0;
+      startTime = null;
+      const btn = document.getElementById('main-btn');
+      btn.className = 'btn-timer idle';
+      btn.innerHTML = '<i class="ti ti-player-play" aria-hidden="true"></i><span class="btn-label">start</span>';
+      render();
+    }
+  }
+
+  function deleteContraction(id) {
+    contractions = contractions.filter(c => c.id !== id);
+    contractions = contractions.map((item, i) => {
+      if (i === 0) return { ...item, interval: null };
+      const prev = contractions[i - 1];
+      return { ...item, interval: Math.round((item.startTime - prev.startTime) / 1000) };
+    });
+    render();
+  }
+
+  function render() {
+    const n = contractions.length;
+    document.getElementById('card-count').textContent = n || '—';
+    document.getElementById('hint').style.display = n === 0 ? 'block' : 'none';
+    document.getElementById('table-wrap').style.display = n === 0 ? 'none' : 'block';
+
+    const avgDur = n > 0 ? Math.round(contractions.reduce((s, c) => s + c.duration, 0) / n) : null;
+    document.getElementById('card-avg-dur').textContent = avgDur != null ? fmtSec(avgDur) : '—';
+
+    const intervals = contractions.filter(c => c.interval != null).map(c => c.interval);
+    const lastInt = intervals.length > 0 ? intervals[intervals.length - 1] : null;
+    const avgInt = intervals.length > 0 ? Math.round(intervals.reduce((s, i) => s + i, 0) / intervals.length) : null;
+    document.getElementById('card-last-int').textContent = lastInt != null ? fmtSec(lastInt) : '—';
+
+    // Status badge
+    const badge = document.getElementById('status-badge');
+    if (n > 0) {
+      badge.classList.add('visible');
+      let pattern = 'early', label = 'Early labour';
+      if (avgInt != null && avgInt <= 300 && avgDur != null && avgDur >= 45) {
+        pattern = 'alert'; label = 'Call your midwife';
+      } else if (avgInt != null && avgInt <= 600) {
+        pattern = 'active'; label = 'Active labour';
+      }
+      badge.className = 'status-badge visible ' + pattern;
+      badge.textContent = label;
+    } else {
+      badge.className = 'status-badge';
+    }
+
+    // Table rows (newest first)
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    const rev = [...contractions].reverse();
+    rev.forEach((c, i) => {
+      const num = contractions.length - i;
+      const tr = document.createElement('tr');
+      if (i === 0) tr.className = 'latest';
+      tr.innerHTML = `
+        <td class="td-num">${num}</td>
+        <td style="font-weight:500">${c.time}</td>
+        <td><span class="dur-badge ${durClass(c.duration)}">${fmtSec(c.duration)}</span></td>
+        <td>${c.interval != null ? fmtSec(c.interval) : '<span class="muted">—</span>'}</td>
+        <td style="text-align:center">
+          <button class="btn-del" onclick="deleteContraction(${c.id})" aria-label="Delete contraction">
+            <i class="ti ti-trash" aria-hidden="true"></i>
+          </button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+</script>
+
+
+</body></html>
